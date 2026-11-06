@@ -20,4 +20,6 @@ Supports opaque sRGB `#RGB` and `#RRGGBB` colors only. Alpha, gradients, images,
 
 Formula and thresholds follow [W3C contrast guidance](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html). Inspired by design tooling on [GitHub Trending](https://github.com/trending); independently implemented, no upstream code copied. MIT license.
 
-Roadmap: named pairs, actionable diagnostics, CLI regression coverage and optional design-token import.
+Python callers can use `audit(pairs, threshold=4.5)`. The threshold must be a finite number from 1 to 21; invalid values raise `ValueError` rather than producing misleading results or nonstandard JSON.
+
+Roadmap: named pairs, actionable diagnostics and optional design-token import. CLI integration and invalid-threshold regression tests are included.

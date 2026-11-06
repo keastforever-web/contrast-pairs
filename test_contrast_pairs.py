@@ -8,6 +8,11 @@ from contrast_pairs import audit, luminance
 
 
 class ContrastTests(unittest.TestCase):
+    def test_invalid_thresholds_rejected(self):
+        for threshold in [float('nan'), float('inf'), 0, 22, True, '4.5', None]:
+            with self.subTest(threshold=threshold), self.assertRaises(ValueError):
+                audit([{'foreground': '#000', 'background': '#fff'}], threshold)
+
     def test_cli_exit_codes_and_json(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
             path = Path(directory) / 'color pairs.json'

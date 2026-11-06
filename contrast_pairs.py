@@ -1,6 +1,7 @@
 """Check opaque sRGB color pairs from a JSON file. Python 3.10+."""
 import argparse
 import json
+import math
 import re
 from pathlib import Path
 
@@ -17,6 +18,8 @@ def luminance(color):
 
 
 def audit(pairs, threshold=4.5):
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not math.isfinite(threshold) or not 1 <= threshold <= 21:
+        raise ValueError('threshold must be a finite number from 1 to 21')
     if not isinstance(pairs, list) or not pairs:
         raise ValueError('input must be a nonempty array of color pairs')
     results = []
