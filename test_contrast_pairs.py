@@ -8,6 +8,31 @@ from contrast_pairs import audit, luminance
 
 
 class ContrastTests(unittest.TestCase):
+    def test_cli_locates_invalid_pair_without_echoing_input(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = Path(directory) / 'private-file-name.json'
+            command = [sys.executable, str(Path(__file__).with_name('contrast_pairs.py')), str(path)]
+            valid = {'foreground': '#000', 'background': '#fff'}
+            cases = [
+                ({'foreground': '#000', 'background': 'PRIVATE_VALUE'},
+                 'pair[1].background: expected #RGB or #RRGGBB'),
+                ({'foreground': 'PRIVATE_VALUE', 'background': '#fff'},
+                 'pair[1].foreground: expected #RGB or #RRGGBB'),
+                ({'background': '#fff'}, 'pair[1].foreground: required field missing'),
+                ({'foreground': '#000'}, 'pair[1].background: required field missing'),
+                ('PRIVATE_VALUE', 'pair[1]: expected an object'),
+            ]
+            for invalid, diagnostic in cases:
+                with self.subTest(diagnostic=diagnostic):
+                    path.write_text(json.dumps([valid, invalid]), encoding='utf-8')
+                    process = subprocess.run(command, capture_output=True, text=True)
+                    self.assertEqual(process.returncode, 2)
+                    self.assertEqual(process.stdout, '')
+                    self.assertIn(diagnostic, process.stderr)
+                    self.assertNotIn('PRIVATE_VALUE', process.stderr)
+                    self.assertNotIn(path.name, process.stderr)
+                    self.assertNotIn('Traceback', process.stderr)
+
     def test_invalid_thresholds_rejected(self):
         for threshold in [float('nan'), float('inf'), 0, 22, True, '4.5', None]:
             with self.subTest(threshold=threshold), self.assertRaises(ValueError):

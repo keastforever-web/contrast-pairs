@@ -6,6 +6,10 @@ import re
 from pathlib import Path
 
 
+class AuditInputError(ValueError):
+    """Invalid pair data with a diagnostic safe to display on the CLI."""
+
+
 def luminance(color):
     if not isinstance(color, str) or not re.fullmatch(r'#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?', color):
         raise ValueError('colors must use #RGB or #RRGGBB')
@@ -21,12 +25,20 @@ def audit(pairs, threshold=4.5):
     if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not math.isfinite(threshold) or not 1 <= threshold <= 21:
         raise ValueError('threshold must be a finite number from 1 to 21')
     if not isinstance(pairs, list) or not pairs:
-        raise ValueError('input must be a nonempty array of color pairs')
+        raise AuditInputError('input must be a nonempty array of color pairs')
     results = []
     for index, pair in enumerate(pairs):
-        if not isinstance(pair, dict) or 'foreground' not in pair or 'background' not in pair:
-            raise ValueError('each pair needs foreground and background')
-        a, b = sorted([luminance(pair['foreground']), luminance(pair['background'])])
+        if not isinstance(pair, dict):
+            raise AuditInputError(f'pair[{index}]: expected an object')
+        values = []
+        for field in ('foreground', 'background'):
+            if field not in pair:
+                raise AuditInputError(f'pair[{index}].{field}: required field missing')
+            try:
+                values.append(luminance(pair[field]))
+            except ValueError:
+                raise AuditInputError(f'pair[{index}].{field}: expected #RGB or #RRGGBB') from None
+        a, b = sorted(values)
         ratio = (b + 0.05) / (a + 0.05)
         results.append({'index': index, 'ratio': ratio, 'passes': ratio >= threshold})
     return {'ok': all(item['passes'] for item in results), 'threshold': threshold, 'pairs': results}
@@ -40,6 +52,8 @@ def main(argv=None):
     try:
         data = json.loads(Path(args.file).read_text(encoding='utf-8-sig'))
         report = audit(data, {'normal': 4.5, 'large': 3.0, 'enhanced': 7.0}[args.level])
+    except AuditInputError as error:
+        parser.exit(2, f'contrast-pairs: {error}\n')
     except (OSError, ValueError, TypeError):
         parser.exit(2, 'contrast-pairs: invalid input; expected a readable JSON array with opaque hex colors\n')
     print(json.dumps(report))

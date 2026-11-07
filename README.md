@@ -22,4 +22,11 @@ Formula and thresholds follow [W3C contrast guidance](https://www.w3.org/WAI/WCA
 
 Python callers can use `audit(pairs, threshold=4.5)`. The threshold must be a finite number from 1 to 21; invalid values raise `ValueError` rather than producing misleading results or nonstandard JSON.
 
-Roadmap: named pairs, actionable diagnostics and optional design-token import. CLI integration and invalid-threshold regression tests are included.
+Roadmap: named pairs and optional design-token import. CLI integration and invalid-threshold regression tests are included.
+
+Invalid pair diagnostics identify the zero-based input position and field, for example
+`contrast-pairs: pair[1].background: expected #RGB or #RRGGBB` means the second
+pair has an invalid background. Missing fields and non-object entries are also
+located. Errors go to stderr with exit 2 and no partial JSON on stdout; invalid
+values and file paths are not echoed. Unreadable files and malformed JSON retain
+a generic input error.
