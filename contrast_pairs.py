@@ -30,6 +30,8 @@ def audit(pairs, threshold=4.5):
     for index, pair in enumerate(pairs):
         if not isinstance(pair, dict):
             raise AuditInputError(f'pair[{index}]: expected an object')
+        if 'name' in pair and (not isinstance(pair['name'], str) or not pair['name'].strip()):
+            raise AuditInputError(f'pair[{index}].name: expected a nonempty string')
         values = []
         for field in ('foreground', 'background'):
             if field not in pair:
@@ -40,7 +42,10 @@ def audit(pairs, threshold=4.5):
                 raise AuditInputError(f'pair[{index}].{field}: expected #RGB or #RRGGBB') from None
         a, b = sorted(values)
         ratio = (b + 0.05) / (a + 0.05)
-        results.append({'index': index, 'ratio': ratio, 'passes': ratio >= threshold})
+        result = {'index': index, 'ratio': ratio, 'passes': ratio >= threshold}
+        if 'name' in pair:
+            result['name'] = pair['name']
+        results.append(result)
     return {'ok': all(item['passes'] for item in results), 'threshold': threshold, 'pairs': results}
 
 

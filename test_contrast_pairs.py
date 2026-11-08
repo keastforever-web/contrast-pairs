@@ -21,6 +21,8 @@ class ContrastTests(unittest.TestCase):
                 ({'background': '#fff'}, 'pair[1].foreground: required field missing'),
                 ({'foreground': '#000'}, 'pair[1].background: required field missing'),
                 ('PRIVATE_VALUE', 'pair[1]: expected an object'),
+                ({'name': None, 'foreground': '#000', 'background': '#fff'},
+                 'pair[1].name: expected a nonempty string'),
             ]
             for invalid, diagnostic in cases:
                 with self.subTest(diagnostic=diagnostic):
@@ -32,6 +34,30 @@ class ContrastTests(unittest.TestCase):
                     self.assertNotIn('PRIVATE_VALUE', process.stderr)
                     self.assertNotIn(path.name, process.stderr)
                     self.assertNotIn('Traceback', process.stderr)
+
+    def test_cli_preserves_pair_names_for_failed_token_reports(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = Path(directory) / 'named pairs.json'
+            pairs = [
+                {'name': 'button.primary', 'foreground': '#fff', 'background': '#fff'},
+                {'name': 'button.primary', 'foreground': '#000', 'background': '#fff'},
+                {'foreground': '#000', 'background': '#fff'},
+            ]
+            path.write_text(json.dumps(pairs), encoding='utf-8')
+            process = subprocess.run([sys.executable, str(Path(__file__).with_name('contrast_pairs.py')), str(path)], capture_output=True, text=True)
+            self.assertEqual(process.returncode, 1)
+            report = json.loads(process.stdout)
+            self.assertEqual([p.get('name') for p in report['pairs']], ['button.primary', 'button.primary', None])
+            self.assertEqual([p['index'] for p in report['pairs']], [0, 1, 2])
+            self.assertEqual([p['passes'] for p in report['pairs']], [False, True, True])
+            self.assertEqual(set(report['pairs'][2]), {'index', 'ratio', 'passes'})
+
+    def test_pair_names_round_trip_and_validate(self):
+        label = '  primary \u6587\u672c \"quoted\"  '
+        self.assertEqual(audit([{'name': label, 'foreground': '#000', 'background': '#fff'}])['pairs'][0]['name'], label)
+        for invalid in [None, 42, True, [], {}, '', '   ', '\t\n']:
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ValueError, r'pair\[0\].name: expected a nonempty string'):
+                audit([{'name': invalid, 'foreground': '#000', 'background': '#fff'}])
 
     def test_invalid_thresholds_rejected(self):
         for threshold in [float('nan'), float('inf'), 0, 22, True, '4.5', None]:

@@ -22,7 +22,7 @@ Formula and thresholds follow [W3C contrast guidance](https://www.w3.org/WAI/WCA
 
 Python callers can use `audit(pairs, threshold=4.5)`. The threshold must be a finite number from 1 to 21; invalid values raise `ValueError` rather than producing misleading results or nonstandard JSON.
 
-Roadmap: named pairs and optional design-token import. CLI integration and invalid-threshold regression tests are included.
+Roadmap: optional design-token import when a scoped use case is available. CLI integration and invalid-threshold regression tests are included.
 
 Invalid pair diagnostics identify the zero-based input position and field, for example
 `contrast-pairs: pair[1].background: expected #RGB or #RRGGBB` means the second
@@ -30,3 +30,25 @@ pair has an invalid background. Missing fields and non-object entries are also
 located. Errors go to stderr with exit 2 and no partial JSON on stdout; invalid
 values and file paths are not echoed. Unreadable files and malformed JSON retain
 a generic input error.
+
+### Identify pairs by name
+
+Add an optional `name` when a token has a meaningful label:
+
+```json
+[{"name":"button.primary","foreground":"#ffffff","background":"#ffffff"}]
+```
+
+The report retains that label, making a failed check identifiable even after
+reordering the input. The example exits 1 and includes:
+
+```json
+{"index":0,"ratio":1.0,"passes":false,"name":"button.primary"}
+```
+
+`name` must be a nonempty string (not just whitespace). It is copied exactly,
+including Unicode and surrounding spaces, into JSON output. Duplicate names are
+allowed; `index` still uniquely identifies an input position. Unnamed pairs keep
+the existing output shape without a `name` key. Names are labels you choose to
+include in reports; avoid putting private data in them. Invalid names exit 2
+with a position/field diagnostic without echoing the supplied value.
