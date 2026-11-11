@@ -60,7 +60,8 @@ class ContrastTests(unittest.TestCase):
                 audit([{'name': invalid, 'foreground': '#000', 'background': '#fff'}])
 
     def test_invalid_thresholds_rejected(self):
-        for threshold in [float('nan'), float('inf'), 0, 22, True, '4.5', None]:
+        invalid = [float('nan'), float('inf'), 0, 22, True, '4.5', None, 10**400, -(10**400)]
+        for threshold in invalid:
             with self.subTest(threshold=threshold), self.assertRaises(ValueError):
                 audit([{'foreground': '#000', 'background': '#fff'}], threshold)
 
