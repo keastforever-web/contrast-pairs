@@ -62,7 +62,7 @@ def main(argv=None):
         report = audit(data, {'normal': 4.5, 'large': 3.0, 'enhanced': 7.0}[args.level])
     except AuditInputError as error:
         parser.exit(2, f'contrast-pairs: {error}\n')
-    except (OSError, ValueError, TypeError):
+    except (OSError, ValueError, TypeError, RecursionError):
         parser.exit(2, 'contrast-pairs: invalid input; expected a readable JSON array with opaque hex colors\n')
     print(json.dumps(report))
     return 0 if report['ok'] else 1

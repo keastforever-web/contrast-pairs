@@ -59,6 +59,21 @@ class ContrastTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaisesRegex(ValueError, r'pair\[0\].name: expected a nonempty string'):
                 audit([{'name': invalid, 'foreground': '#000', 'background': '#fff'}])
 
+    def test_cli_rejects_excessive_json_nesting(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = Path(directory) / 'private-input.json'
+            path.write_text('[' * 20000 + '"PRIVATE_VALUE"' + ']' * 20000, encoding='utf-8')
+            process = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name('contrast_pairs.py')), str(path)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(process.returncode, 2)
+            self.assertEqual(process.stdout, '')
+            self.assertIn('contrast-pairs: invalid input', process.stderr)
+            self.assertNotIn('Traceback', process.stderr)
+            self.assertNotIn(path.name, process.stderr)
+            self.assertNotIn('PRIVATE_VALUE', process.stderr)
+
     def test_invalid_thresholds_rejected(self):
         invalid = [float('nan'), float('inf'), 0, 22, True, '4.5', None, 10**400, -(10**400)]
         for threshold in invalid:
