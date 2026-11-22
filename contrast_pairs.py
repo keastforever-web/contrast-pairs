@@ -56,6 +56,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('file', help='JSON array of foreground/background objects')
     parser.add_argument('--level', choices=['normal', 'large', 'enhanced'], default='normal')
+    parser.add_argument('--failures-only', action='store_true',
+                        help='include only failing pairs in the JSON report')
     args = parser.parse_args(argv)
     try:
         data = json.loads(Path(args.file).read_text(encoding='utf-8-sig'))
@@ -64,6 +66,8 @@ def main(argv=None):
         parser.exit(2, f'contrast-pairs: {error}\n')
     except (OSError, ValueError, TypeError, RecursionError):
         parser.exit(2, 'contrast-pairs: invalid input; expected a readable JSON array with opaque hex colors\n')
+    if args.failures_only:
+        report['pairs'] = [pair for pair in report['pairs'] if not pair['passes']]
     print(json.dumps(report))
     return 0 if report['ok'] else 1
 

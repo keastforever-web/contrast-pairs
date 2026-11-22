@@ -52,6 +52,25 @@ class ContrastTests(unittest.TestCase):
             self.assertEqual([p['passes'] for p in report['pairs']], [False, True, True])
             self.assertEqual(set(report['pairs'][2]), {'index', 'ratio', 'passes'})
 
+    def test_cli_can_report_only_failures(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = Path(directory) / 'pairs.json'
+            command = [sys.executable, str(Path(__file__).with_name('contrast_pairs.py')),
+                       str(path), '--failures-only']
+            passing = {'name': 'body', 'foreground': '#000', 'background': '#fff'}
+            failing = {'name': 'button', 'foreground': '#777', 'background': '#fff'}
+            path.write_text(json.dumps([passing, failing]), encoding='utf-8')
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertFalse(report['ok'])
+            self.assertEqual([(pair['index'], pair['name']) for pair in report['pairs']],
+                             [(1, 'button')])
+            path.write_text(json.dumps([passing]), encoding='utf-8')
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), {'ok': True, 'threshold': 4.5, 'pairs': []})
+
     def test_pair_names_round_trip_and_validate(self):
         label = '  primary \u6587\u672c \"quoted\"  '
         self.assertEqual(audit([{'name': label, 'foreground': '#000', 'background': '#fff'}])['pairs'][0]['name'], label)
